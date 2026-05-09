@@ -90,6 +90,7 @@ public:
 
 class SurfaceBatteryNub;
 class SurfaceHIDNub;
+class SurfaceThermalNub;
 
 class EXPORT SurfaceSerialHubDriver : public IOService {
     OSDeclareDefaultStructors(SurfaceSerialHubDriver);
@@ -135,6 +136,7 @@ private:
     VoodooGPIO*             gpio_controller {nullptr};
     SurfaceBatteryNub*      battery_nub {nullptr};
     SurfaceHIDNub*          hid_nub {nullptr};
+    SurfaceThermalNub*      thermal_nub {nullptr};
     SurfaceSerialHubClient* handler[SSH_REQID_MIN];
     
     bool            awake {true};

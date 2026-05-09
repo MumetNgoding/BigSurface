@@ -10,6 +10,7 @@
 #include "../../../Dependencies/VoodooSerial/VoodooSerial/utils/VoodooACPIResourcesParser/VoodooACPIResourcesParser.hpp"
 #include "../SurfaceSerialHubDevices/SurfaceBatteryNub.hpp"
 #include "../SurfaceSerialHubDevices/SurfaceHIDNub.hpp"
+#include "../SurfaceSerialHubDevices/SurfaceThermalNub.hpp"
 
 OSDefineMetaClassAndAbstractStructors(SurfaceSerialHubClient, IOService);
 
@@ -558,6 +559,20 @@ bool SurfaceSerialHubDriver::start(IOService *provider) {
             OSSafeReleaseNULL(hid_nub);
         } else
             LOG("Surface HID nub published!");
+    }
+
+    thermal_nub = OSTypeAlloc(SurfaceThermalNub);
+    if (!thermal_nub || !thermal_nub->init() || !thermal_nub->attach(this)) {
+        LOG("Failed to init Surface Thermal nub!");
+        OSSafeReleaseNULL(thermal_nub);
+    } else {
+        thermal_nub->setName("SurfaceThermalNub"); // Tambahin ini bro!
+        if (!thermal_nub->start(this)) {
+            LOG("Failed to attach Surface Thermal nub!");
+            thermal_nub->detach(this);
+            OSSafeReleaseNULL(thermal_nub);
+        } else
+            LOG("Surface Thermal nub published!");
     }
 
     PMinit();

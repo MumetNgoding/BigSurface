@@ -483,6 +483,19 @@
 			<key>IOProviderClass</key>
 			<string>SurfaceHIDNub</string>
 		</dict>
+        <key>Surface Thermal</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.xavier.BigSurface</string>
+            <key>IOClass</key>
+            <string>SurfaceThermalDriver</string>
+            <key>IOMatchCategory</key>
+            <string>SurfaceThermalDriver</string>
+            <key>IOProbeScore</key>
+            <integer>1000</integer>
+            <key>IOProviderClass</key>
+            <string>SurfaceThermalNub</string>
+        </dict>
 		<key>Surface Serial Hub</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
