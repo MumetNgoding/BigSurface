@@ -27,7 +27,7 @@ See my sub-repo `VoodooSerial` for details
 - Battery status--Surface Serial Hub
   > UART driver as well as MS's SAM module driver are implemented. 
 - Performance mode
-  > Right now it is set by `PerformanceMode` in `SurfaceBattery` (default 0x01), changing it to other values is not observed to have any effects. If you find any difference (fan speed or battery life), please let me know
+  > ~~Right now it is set by `PerformanceMode` in `SurfaceBattery` (default 0x01), changing it to other values is not observed to have any effects.~~ **Update:** Now fully functional with automatic switching (0x01 on AC, 0x02 on Battery) for better battery life and thermals ( Now estimate battery charging and auto switching mode works). If you find any difference (fan speed or battery life), please let me know
   > 
   > Right now it can only be set by changing the plist or using `ioio`
   > We need a userspace software to control it if it actually has something useful.
@@ -35,12 +35,13 @@ See my sub-repo `VoodooSerial` for details
   > Works now, all keys and gestures are recognised properly.
   > 
   > Known issue: neither keyboard nor touchpad can wake up the system.
-- Touch Screen & Stylus
-  > The code is ported from linux, including `mei` and surface-linux's `ipts` & `iptsd` drivers.
+- ~~Touch Screen & Stylus~~
+  > ~~The code is ported from linux, including `mei` and surface-linux's `ipts` & `iptsd` drivers.~~
   > 
-  > 10 finger touch & stylus
+  > ~~10 finger touch & stylus~~
   > 
-  > **Important**: need a SSDT patch! See in the release section 
+  > ~~**Important**: need a SSDT patch! See in the release section~~
+  > **Update:** Removed, i dont use rn
   
 Possible values for Performance mode are:
 
