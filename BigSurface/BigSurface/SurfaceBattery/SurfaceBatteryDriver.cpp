@@ -80,21 +80,7 @@ void SurfaceBatteryDriver::updateBatteryStatus(IOInterruptEventSource *sender, i
     UInt32 psr;
     timer->cancelTimeout();
 
-    // Check performance mode based on power source
-    if (nub->getAdaptorStatus(&psr) != kIOReturnSuccess) {
-        LOG("Failed to get power source status from SSH!");
-    } else {
-        bool old_connected = power_connected;
-        power_connected = BatteryManager::getShared()->updateAdapterStatus(0, psr);
-        BatteryManager::getShared()->externalPowerNotify(power_connected);
-        
-        // Auto Performance Switching
-        if (old_connected != power_connected) {
-            UInt32 mode = power_connected ? 0x01 : 0x02; // 0x01 (Normal) on AC, 0x02 (Safe) on Battery
-            LOG("Switching performance mode to %d due to power change", mode);
-            nub->setPerformanceMode(mode);
-        }
-    }
+
 
     for (int i = 1; i <= BatteryManager::getShared()->batteriesCount; i++) {
         if (bix_fail[i-1]) {
@@ -124,6 +110,31 @@ void SurfaceBatteryDriver::updateBatteryStatus(IOInterruptEventSource *sender, i
         }
     }
     
+    // Check performance mode AFTER battery update by analyzing battery states directly
+    bool power_is_connected = false;
+    for (int i = 0; i < BatteryManager::getShared()->batteriesCount; i++) {
+        if (BatteryManager::getShared()->state.btInfo[i].connected) {
+            UInt32 bst_state = BatteryManager::getShared()->state.btInfo[i].state.state & SurfaceBattery::BSTStateMask;
+            // If any battery is Charging or Not Charging (meaning it's full or AC is connected), we are on AC
+            if (bst_state == SurfaceBattery::BSTCharging || bst_state == SurfaceBattery::BSTNotCharging) {
+                power_is_connected = true;
+                break;
+            }
+        }
+    }
+
+    if (power_is_connected != power_connected) {
+        power_connected = power_is_connected;
+        UInt32 mode = power_is_connected ? 0x01 : 0x02;
+        LOG("Switching performance mode to %u due to power change", mode);
+        nub->setPerformanceMode(mode);
+        setProperty("PerformanceMode", mode, 32);
+    }
+
+    // Always update the manager and system with the truth from the batteries
+    BatteryManager::getShared()->updateAdapterStatus(0, power_is_connected ? 1 : 0);
+    BatteryManager::getShared()->externalPowerNotify(power_is_connected);
+
     BatteryManager::getShared()->informStatusChanged();
 
     if (quick_cnt) {
