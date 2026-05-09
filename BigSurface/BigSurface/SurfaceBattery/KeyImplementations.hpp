@@ -17,9 +17,9 @@ class BatKey : public VirtualSMCValue { };
 
 class BatIdxKey : public VirtualSMCValue {
 protected:
-	size_t index;
+    size_t index;
 public:
-	BatIdxKey(size_t index) : index(index) {}
+    BatIdxKey(size_t index) : index(index) {}
 };
 
 class AC_N : public BatKey { protected: SMC_RESULT readAccess() override; };
@@ -49,6 +49,9 @@ class CHBV : public BatKey { protected: SMC_RESULT readAccess() override; };
 class CHLC : public BatKey { protected: SMC_RESULT readAccess() override; };
 
 class BC1V : public BatIdxKey { using BatIdxKey::BatIdxKey; protected: SMC_RESULT readAccess() override; };
+
+class IB0R : public BatKey { protected: SMC_RESULT readAccess() override; };
+class PB0R : public BatKey { protected: SMC_RESULT readAccess() override; };
 
 //TODO: implement these
 // class D0IR : public BatKey { using BatKey::BatKey; protected: SMC_RESULT readAccess() override; };

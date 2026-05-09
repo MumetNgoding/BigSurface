@@ -180,7 +180,12 @@ void SurfaceAmbientLightSensorDriver::pollALI(IOTimerEventSource *timer) {
         poller->setTimeoutMS(POLLING_INTERVAL);
         return;
     }
-    atomic_store_explicit(&current_lux, color[0]*1.5, memory_order_release);
+    UInt32 raw_lux = color[0] * 1.5;
+    UInt32 old_lux = atomic_load_explicit(&current_lux, memory_order_acquire);
+    
+    // Smoothing: 70% old value, 30% new value for gradual transitions
+    UInt32 smoothed_lux = (old_lux * 7 + raw_lux * 3) / 10;
+    atomic_store_explicit(&current_lux, smoothed_lux, memory_order_release);
     
     VirtualSMCAPI::postInterrupt(SmcEventALSChange);
     

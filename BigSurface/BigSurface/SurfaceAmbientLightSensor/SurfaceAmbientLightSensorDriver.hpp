@@ -25,7 +25,7 @@
 #include "AmbientLightValue.hpp"
 #include "APDS9960Constants.h"
 
-#define POLLING_INTERVAL 1000
+#define POLLING_INTERVAL 300
 
 class EXPORT SurfaceAmbientLightSensorDriver : public IOService {
     OSDeclareDefaultStructors(SurfaceAmbientLightSensorDriver);

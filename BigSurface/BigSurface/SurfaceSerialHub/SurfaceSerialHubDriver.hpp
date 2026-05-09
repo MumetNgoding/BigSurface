@@ -24,8 +24,8 @@
 #define SSH_MSG_LENGTH_UNKNOWN  (SSH_MSG_CACHE_SIZE+1)
 #define SSH_RING_BUFFER_SIZE    10
 #define SSH_RING_BUFFER_NEXT(pos)   ((pos) + 1) % SSH_RING_BUFFER_SIZE
-#define SSH_ACK_TIMEOUT         50
-#define SSH_CMD_TRAIL_CNT       3
+#define SSH_ACK_TIMEOUT         20
+#define SSH_CMD_TRAIL_CNT       5
 #define SSH_WAIT_TIMEOUT        (SSH_ACK_TIMEOUT * SSH_CMD_TRAIL_CNT)
 
 class CircleIDCounter {

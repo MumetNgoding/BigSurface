@@ -46,24 +46,29 @@ void SurfaceBatteryDriver::updateBatteryInformation(IOInterruptEventSource *send
     if (!awake)
         return;
     
-    bix_fail = false;
-    bool connected = false;
-    if (nub->getBatteryConnection(1, &connected) != kIOReturnSuccess) {
-        LOG("Failed to get battery connection status from SSH!");
-        bix_fail = true;
-        return;
-    }
-    if (!connected)
-        BatteryManager::getShared()->updateBatteryInfoExtended(0, nullptr); // reset battery
-    else if (BatteryManager::getShared()->needUpdateBIX(0)) {
-        OSArray *bix;
-        if (nub->getBatteryInformation(1, &bix) != kIOReturnSuccess) {
-            LOG("Failed to get BIX from SSH!");
-            bix_fail = true;
-        } else {
-            BatteryManager::getShared()->updateBatteryInfoExtended(0, bix);
-            bix->flushCollection();
-            OSSafeReleaseNULL(bix);
+    for (int i = 1; i <= BatteryManager::getShared()->batteriesCount; i++) {
+        bix_fail[i-1] = false;
+        bool connected = false;
+        if (nub->getBatteryConnection(i, &connected) != kIOReturnSuccess) {
+            LOG("Failed to get battery %d connection status from SSH!", i);
+            bix_fail[i-1] = true;
+            bat_missing[i-1] = true;
+            continue;
+        }
+        if (!connected) {
+            BatteryManager::getShared()->updateBatteryInfoExtended(i-1, nullptr); // reset battery
+            bat_missing[i-1] = true;
+        } else if (BatteryManager::getShared()->needUpdateBIX(i-1) || bat_missing[i-1]) {
+            OSArray *bix;
+            if (nub->getBatteryInformation(i, &bix) != kIOReturnSuccess) {
+                LOG("Failed to get BIX %d from SSH!", i);
+                bix_fail[i-1] = true;
+            } else {
+                BatteryManager::getShared()->updateBatteryInfoExtended(i-1, bix);
+                bix->flushCollection();
+                OSSafeReleaseNULL(bix);
+                bat_missing[i-1] = false;
+            }
         }
     }
 }
@@ -73,44 +78,73 @@ void SurfaceBatteryDriver::updateBatteryStatus(IOInterruptEventSource *sender, i
         return;
     
     UInt32 psr;
-    bool connected = false;
-    
     timer->cancelTimeout();
-    if (bix_fail) {
-        updateBatteryInformation(nullptr, 0);
-        if (bix_fail)
-            goto fail;
-    }
-    
+
+    // Check performance mode based on power source
     if (nub->getAdaptorStatus(&psr) != kIOReturnSuccess) {
         LOG("Failed to get power source status from SSH!");
-        goto fail;
-    } else
+    } else {
+        bool old_connected = power_connected;
         power_connected = BatteryManager::getShared()->updateAdapterStatus(0, psr);
-    BatteryManager::getShared()->externalPowerNotify(power_connected);
+        BatteryManager::getShared()->externalPowerNotify(power_connected);
+        
+        // Auto Performance Switching
+        if (old_connected != power_connected) {
+            UInt32 mode = power_connected ? 0x01 : 0x02; // 0x01 (Normal) on AC, 0x02 (Safe) on Battery
+            LOG("Switching performance mode to %d due to power change", mode);
+            nub->setPerformanceMode(mode);
+        }
+    }
+
+    for (int i = 1; i <= BatteryManager::getShared()->batteriesCount; i++) {
+        if (bix_fail[i-1]) {
+            updateBatteryInformation(nullptr, 0);
+            if (bix_fail[i-1]) continue;
+        }
+        
+        bool connected = false;
+        if (nub->getBatteryConnection(i, &connected) != kIOReturnSuccess) {
+            LOG("Failed to get battery %d connection status from SSH!", i);
+            continue;
+        }
+        
+        if (connected) {
+            UInt16 temp = 0;
+            UInt32 bst[4];
+            if (nub->getBatteryStatus(i, bst, &temp) != kIOReturnSuccess) {
+                LOG("Failed to get BST %d from SSH!", i);
+            } else {
+                BatteryManager::getShared()->updateBatteryStatus(i-1, bst);
+                if (temp)
+                    BatteryManager::getShared()->updateBatteryTemperature(i-1, temp);
+                bat_missing[i-1] = false;
+            }
+        } else {
+            bat_missing[i-1] = true;
+        }
+    }
     
-    if (nub->getBatteryConnection(1, &connected) != kIOReturnSuccess) {
-        LOG("Failed to get battery connection status from SSH!");
-        return;
-    }
-    if (connected) {
-        UInt16 temp = 0;
-        UInt32 bst[4];
-        if (nub->getBatteryStatus(1, bst, &temp) != kIOReturnSuccess) {
-            LOG("Failed to get BST from SSH!");
-            goto fail;
-        } else
-            BatteryManager::getShared()->updateBatteryStatus(0, bst);
-        if (temp)
-            BatteryManager::getShared()->updateBatteryTemperature(0, temp);
-        BatteryManager::getShared()->informStatusChanged();
-    }
+    BatteryManager::getShared()->informStatusChanged();
 
     if (quick_cnt) {
         if (--quick_cnt == 0)
-            sync = true;    // after finishing quick update, sync with normal update
+            sync = true;
         timer->setTimeoutMS(BST_UPDATE_QUICK);
-    } else {    // sync normal update interval
+    } else {
+        UInt32 timeout = BST_UPDATE_NORMAL; // Default 30s
+        
+        if (!power_connected) {
+            // Adaptive Polling (Smart Polling)
+            UInt32 capacity = BatteryManager::getShared()->state.btInfo[0].state.remainingCapacity;
+            UInt32 maxCapacity = BatteryManager::getShared()->state.btInfo[0].state.lastFullChargeCapacity;
+            
+            if (maxCapacity > 0 && (capacity * 100 / maxCapacity) < 20) {
+                timeout = 10000; // Poll every 10s if <20%
+            } else {
+                timeout = 60000; // Poll every 60s to save battery
+            }
+        }
+        
         if (sync) {
             AbsoluteTime cur_time;
             UInt64 nsecs;
@@ -121,16 +155,13 @@ void SurfaceBatteryDriver::updateBatteryStatus(IOInterruptEventSource *sender, i
             IOSimpleLockUnlock(BatteryManager::getShared()->stateLock);
             absolutetime_to_nanoseconds(cur_time, &nsecs);
             UInt8 timerDelta = nsecs / (1000000 * BST_UPDATE_QUICK);
-            if (timerDelta < BST_UPDATE_NORMAL/BST_UPDATE_QUICK - 5) {
-                timer->setTimeoutMS(BST_UPDATE_NORMAL - (2 + timerDelta) * BST_UPDATE_QUICK);
+            if (timerDelta < timeout/BST_UPDATE_QUICK - 5) {
+                timer->setTimeoutMS(timeout - (2 + timerDelta) * BST_UPDATE_QUICK);
                 return;
             }
         }
-        timer->setTimeoutMS(BST_UPDATE_NORMAL);
+        timer->setTimeoutMS(timeout);
     }
-    return;
-fail:
-    timer->setTimeoutMS(BST_UPDATE_QUICK/2);
 }
 
 void SurfaceBatteryDriver::pollBatteryStatus(IOTimerEventSource *sender) {
@@ -140,7 +171,9 @@ void SurfaceBatteryDriver::pollBatteryStatus(IOTimerEventSource *sender) {
 void SurfaceBatteryDriver::wakeupDelayedUpdate(IOTimerEventSource *sender) {
     update_bix->enable();
     update_bst->enable();
-    bix_fail = true;
+    for (int i = 0; i < BatteryManager::getShared()->batteriesCount; i++) {
+        bix_fail[i] = true;
+    }
     quick_cnt = BST_UPDATE_QUICK_CNT;
     clock_get_uptime(&last_update);
     updateBatteryStatus(nullptr, 0);
@@ -154,42 +187,40 @@ void SurfaceBatteryDriver::wakeupDelayedUpdate(IOTimerEventSource *sender) {
 }
 
 IOService *SurfaceBatteryDriver::probe(IOService *provider, SInt32 *score) {
-	if (!super::probe(provider, score))
+    if (!super::probe(provider, score))
         return nullptr;
     
     nub = OSDynamicCast(SurfaceBatteryNub, provider);
     if (!nub)
         return nullptr;
     
-    //TODO: SurfaceBook series have two batteries
-//    OSNumber *bat_cnt_prop = OSDynamicCast(OSNumber, getProperty("BatteryCount"));
     UInt32 bat_cnt = 1;
-//    if (bat_cnt_prop) {
-//        bat_cnt = bat_cnt_prop->unsigned32BitValue();
-//    } else {
-//        LOG("Fall back to default: battery count = 1");
-//    }
+    bool connected = false;
+    if (nub->getBatteryConnection(2, &connected) == kIOReturnSuccess) {
+        bat_cnt = 2;
+        LOG("Surface Book detected, supporting dual batteries");
+    }
     BatteryManager::createShared(bat_cnt, 1);
 
-	//TODO: implement the keys below as well
-	// IB0R: sp4s or sp5s
-	// IBAC: sp7s
-	// PB0R = IB0R * VP0R
+    //TODO: implement the keys below as well
+    // IB0R: sp4s or sp5s
+    // IBAC: sp7s
+    // PB0R = IB0R * VP0R
 
-	return this;
+    return this;
 }
 
 bool SurfaceBatteryDriver::start(IOService *provider) {
-	if (!super::start(provider))
-		return false;
+    if (!super::start(provider))
+        return false;
 
-	// AppleSMC presence is a requirement, wait for it.
-	auto dict = nameMatching("AppleSMC");
-	auto applesmc = waitForMatchingService(dict);
-	if (!applesmc) {
-		LOG("Timeout in waiting for AppleSMC");
-		return false;
-	}
+    // AppleSMC presence is a requirement, wait for it.
+    auto dict = nameMatching("AppleSMC");
+    auto applesmc = waitForMatchingService(dict);
+    if (!applesmc) {
+        LOG("Timeout in waiting for AppleSMC");
+        return false;
+    }
     OSSafeReleaseNULL(dict);
     OSSafeReleaseNULL(applesmc);
     
@@ -229,76 +260,78 @@ bool SurfaceBatteryDriver::start(IOService *provider) {
         goto exit;
     }
     
-	//WARNING: watch out, key addition is sorted here!
-	if (adaptCount > 0) {
-		VirtualSMCAPI::addKey(KeyACEN, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(0, new ACIN));
-		VirtualSMCAPI::addKey(KeyACFP, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(false, new ACIN));
-		VirtualSMCAPI::addKey(KeyACID, vsmcPlugin.data, VirtualSMCAPI::valueWithData(nullptr, 8, SmcKeyTypeCh8s, new ACID));
-		VirtualSMCAPI::addKey(KeyACIN, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(false, new ACIN));
-	}
+    //WARNING: watch out, key addition is sorted here!
+    if (adaptCount > 0) {
+        VirtualSMCAPI::addKey(KeyACEN, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(0, new ACIN));
+        VirtualSMCAPI::addKey(KeyACFP, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(false, new ACIN));
+        VirtualSMCAPI::addKey(KeyACID, vsmcPlugin.data, VirtualSMCAPI::valueWithData(nullptr, 8, SmcKeyTypeCh8s, new ACID));
+        VirtualSMCAPI::addKey(KeyACIN, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(false, new ACIN));
+    }
 
-	for (UInt8 i = 0; i < batCount; i++) {
-		VirtualSMCAPI::addKey(KeyB0AC(i), vsmcPlugin.data, VirtualSMCAPI::valueWithSint16(400, new B0AC(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
-		VirtualSMCAPI::addKey(KeyB0AV(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(13000, new B0AV(i)));
-		VirtualSMCAPI::addKey(KeyB0BI(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(1, new B0BI(i)));
-		VirtualSMCAPI::addKey(KeyB0CT(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(1, new B0CT(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
-		VirtualSMCAPI::addKey(KeyB0FC(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(4000, new B0FC(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
-		VirtualSMCAPI::addKey(KeyB0PS(i), vsmcPlugin.data, VirtualSMCAPI::valueWithData(nullptr, 2, SmcKeyTypeHex, new B0PS(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
-		VirtualSMCAPI::addKey(KeyB0RM(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(2000, new B0RM(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
-		VirtualSMCAPI::addKey(KeyB0St(i), vsmcPlugin.data, VirtualSMCAPI::valueWithData(nullptr, 2, SmcKeyTypeHex, new B0St(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
-		VirtualSMCAPI::addKey(KeyB0TF(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(0, new B0TF(i)));
-		VirtualSMCAPI::addKey(KeyTB0T(i+1), vsmcPlugin.data, VirtualSMCAPI::valueWithSp(0, SmcKeyTypeSp78, new TB0T(i)));
+    for (UInt8 i = 0; i < batCount; i++) {
+        VirtualSMCAPI::addKey(KeyB0AC(i), vsmcPlugin.data, VirtualSMCAPI::valueWithSint16(400, new B0AC(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
+        VirtualSMCAPI::addKey(KeyB0AV(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(13000, new B0AV(i)));
+        VirtualSMCAPI::addKey(KeyB0BI(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(1, new B0BI(i)));
+        VirtualSMCAPI::addKey(KeyB0CT(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(1, new B0CT(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
+        VirtualSMCAPI::addKey(KeyB0FC(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(4000, new B0FC(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
+        VirtualSMCAPI::addKey(KeyB0PS(i), vsmcPlugin.data, VirtualSMCAPI::valueWithData(nullptr, 2, SmcKeyTypeHex, new B0PS(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
+        VirtualSMCAPI::addKey(KeyB0RM(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(2000, new B0RM(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
+        VirtualSMCAPI::addKey(KeyB0St(i), vsmcPlugin.data, VirtualSMCAPI::valueWithData(nullptr, 2, SmcKeyTypeHex, new B0St(i), SMC_KEY_ATTRIBUTE_PRIVATE_WRITE|SMC_KEY_ATTRIBUTE_WRITE|SMC_KEY_ATTRIBUTE_READ));
+        VirtualSMCAPI::addKey(KeyB0TF(i), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(0, new B0TF(i)));
+        VirtualSMCAPI::addKey(KeyTB0T(i+1), vsmcPlugin.data, VirtualSMCAPI::valueWithSp(0, SmcKeyTypeSp78, new TB0T(i)));
         if (i == 0)
             VirtualSMCAPI::addKey(KeyTB0T(0), vsmcPlugin.data, VirtualSMCAPI::valueWithSp(0, SmcKeyTypeSp78, new TB0T(0)));
-	}
+    }
 
-	VirtualSMCAPI::addKey(KeyBATP, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(true, new BATP));
-	VirtualSMCAPI::addKey(KeyBBAD, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(false, new BBAD));
-	VirtualSMCAPI::addKey(KeyBBIN, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(true, new BBIN));
-	VirtualSMCAPI::addKey(KeyBFCL, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(100, new BFCL, SMC_KEY_ATTRIBUTE_READ | SMC_KEY_ATTRIBUTE_WRITE));
-	VirtualSMCAPI::addKey(KeyBNum, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(1, new BNum));
-	VirtualSMCAPI::addKey(KeyBRSC, vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(40, new BRSC, SMC_KEY_ATTRIBUTE_READ | SMC_KEY_ATTRIBUTE_WRITE | SMC_KEY_ATTRIBUTE_PRIVATE_WRITE));
-	VirtualSMCAPI::addKey(KeyBSIn, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(0, new BSIn));
+    VirtualSMCAPI::addKey(KeyBATP, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(true, new BATP));
+    VirtualSMCAPI::addKey(KeyBBAD, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(false, new BBAD));
+    VirtualSMCAPI::addKey(KeyBBIN, vsmcPlugin.data, VirtualSMCAPI::valueWithFlag(true, new BBIN));
+    VirtualSMCAPI::addKey(KeyBFCL, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(100, new BFCL, SMC_KEY_ATTRIBUTE_READ | SMC_KEY_ATTRIBUTE_WRITE));
+    VirtualSMCAPI::addKey(KeyBNum, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(1, new BNum));
+    VirtualSMCAPI::addKey(KeyIB0R, vsmcPlugin.data, VirtualSMCAPI::valueWithSp(0, SmcKeyTypeSp78, new IB0R));
+    VirtualSMCAPI::addKey(KeyPB0R, vsmcPlugin.data, VirtualSMCAPI::valueWithSp(0, SmcKeyTypeSp78, new PB0R));
+    VirtualSMCAPI::addKey(KeyBRSC, vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(40, new BRSC, SMC_KEY_ATTRIBUTE_READ | SMC_KEY_ATTRIBUTE_WRITE | SMC_KEY_ATTRIBUTE_PRIVATE_WRITE));
+    VirtualSMCAPI::addKey(KeyBSIn, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(0, new BSIn));
 
-	VirtualSMCAPI::addKey(KeyCHBI, vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(0, new CHBI));
-	VirtualSMCAPI::addKey(KeyCHBV, vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(8000, new CHBV));
-	VirtualSMCAPI::addKey(KeyCHLC, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(1, new CHLC));
+    VirtualSMCAPI::addKey(KeyCHBI, vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(0, new CHBI));
+    VirtualSMCAPI::addKey(KeyCHBV, vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(8000, new CHBV));
+    VirtualSMCAPI::addKey(KeyCHLC, vsmcPlugin.data, VirtualSMCAPI::valueWithUint8(1, new CHLC));
 
     for (UInt8 i = 0; i < batCount; i++) {
         VirtualSMCAPI::addKey(KeyBC1V(i+1), vsmcPlugin.data, VirtualSMCAPI::valueWithUint16(defaultBatteryCellVoltage, new BC1V(i)));
     }
 
-	qsort(const_cast<VirtualSMCKeyValue *>(vsmcPlugin.data.data()), vsmcPlugin.data.size(), sizeof(VirtualSMCKeyValue), VirtualSMCKeyValue::compare);
+    qsort(const_cast<VirtualSMCKeyValue *>(vsmcPlugin.data.data()), vsmcPlugin.data.size(), sizeof(VirtualSMCKeyValue), VirtualSMCKeyValue::compare);
     
     PMinit();
     nub->joinPMtree(this);
     registerPowerDriver(this, myIOPMPowerStates, kIOPMNumberPowerStates);
 
-	vsmcNotifier = VirtualSMCAPI::registerHandler(vsmcNotificationHandler, this);
+    vsmcNotifier = VirtualSMCAPI::registerHandler(vsmcNotificationHandler, this);
     if (!vsmcNotifier) {
         PMstop();
         goto exit;
     }
     
     registerService();
-	return true;
+    return true;
 exit:
     releaseResources();
     return false;
 }
 
 bool SurfaceBatteryDriver::vsmcNotificationHandler(void *sensors, void *refCon, IOService *vsmc, IONotifier *notifier) {
-	if (sensors && vsmc) {
-		auto &plugin = static_cast<SurfaceBatteryDriver *>(sensors)->vsmcPlugin;
-		auto ret = vsmc->callPlatformFunction(VirtualSMCAPI::SubmitPlugin, true, sensors, &plugin, nullptr, nullptr);
-		if (ret == kIOReturnSuccess) {
-			IOLog("SurfaceBatteryDriver::Plugin submitted\n");
-			return true;
-		} else {
+    if (sensors && vsmc) {
+        auto &plugin = static_cast<SurfaceBatteryDriver *>(sensors)->vsmcPlugin;
+        auto ret = vsmc->callPlatformFunction(VirtualSMCAPI::SubmitPlugin, true, sensors, &plugin, nullptr, nullptr);
+        if (ret == kIOReturnSuccess) {
+            IOLog("SurfaceBatteryDriver::Plugin submitted\n");
+            return true;
+        } else {
             IOLog("SurfaceBatteryDriver::Plugin submission failure %X\n", ret);
-		}
-	}
-	return false;
+        }
+    }
+    return false;
 }
 
 void SurfaceBatteryDriver::releaseResources() {
@@ -373,6 +406,9 @@ IOReturn SurfaceBatteryDriver::setPowerState(unsigned long whichState, IOService
         if (!awake) {
             awake = true;
             timer->enable();
+            for (int i = 0; i < BatteryManager::getShared()->batteriesCount; i++) {
+                bix_fail[i] = true;
+            }
             if (initial) {
                 initial = false;
                 // when booting, wait for 30 seconds
