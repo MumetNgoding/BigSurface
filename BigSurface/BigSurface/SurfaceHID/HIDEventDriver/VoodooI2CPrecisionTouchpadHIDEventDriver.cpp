@@ -12,7 +12,14 @@
 OSDefineMetaClassAndStructors(VoodooI2CPrecisionTouchpadHIDEventDriver, VoodooI2CMultitouchHIDEventDriver);
 
 void VoodooI2CPrecisionTouchpadHIDEventDriver::enterPrecisionTouchpadMode() {
-    digitiser.input_mode->setValue(INPUT_MODE_TOUCHPAD);
+    // Fix unresponsive SL3 touchpad after wake from sleep/hibernate
+    UInt8 inputMode[] = { INPUT_MODE_TOUCHPAD };
+
+    // Use setDataValue as it does not check for duplicate writes
+    OSData *value = OSData::withBytes(inputMode, sizeof(inputMode));
+    //digitiser.input_mode->setValue(INPUT_MODE_TOUCHPAD);
+    digitiser.input_mode->setDataValue(value);
+    OSSafeReleaseNULL(value);
 
     ready = true;
 }
