@@ -46,14 +46,17 @@ IOReturn SurfaceThermalNub::getFanSpeed(UInt16 *rpm) {
     if (!rpm || !ssh) return kIOReturnBadArgument;
     
     UInt8 response[4] = {0};
-    // Minta 4 byte dari SAM (TC=0x05, IID=0x01, CID=0x01)
+    // Kita coba IID=0x01 (Fan 1) dulu
     IOReturn status = ssh->getResponse(SSH_TC_FAN, SSH_TID_PRIMARY, 0x01, 0x01, nullptr, 0, true, response, 4);
     
     if (status == kIOReturnSuccess) {
-        // Biasanya RPM itu 16-bit Little Endian di byte 0 dan 1
+        // KITA AKTIFIN LAGI LOG-NYA BUAT ANALISA STUCK
+        IOLog("!!! SurfaceThermalNub: RAW DATA -> %02X %02X %02X %02X\n", response[0], response[1], response[2], response[3]);
+        
+        // Ternyata data nggak stuck, kita balikin baca dari byte 0 dan 1
         *rpm = (UInt16)response[0] | ((UInt16)response[1] << 8);
     } else {
-        IOLog("!!! SurfaceThermalNub: SAM Error 0x%08X (IID=0x01)\n", status);
+        IOLog("!!! SurfaceThermalNub: SAM Gagal/Timeout (0x%08X)\n", status);
     }
     
     return status;

@@ -17,8 +17,8 @@ SMC_RESULT F0Ac::readAccess() {
         UInt16 rpm = manager->state.fanSpeedRPM;
         IOSimpleLockUnlock(manager->stateLock);
         
-        // Balikin ke format fpe2 (kali 4) biar persentase di Stats bener
-        *ptr = OSSwapHostToBigInt16(rpm << 2);
+        // KEMBALIKAN KE STANDAR APPLE BIAR GPU NGGAK THROTTLING
+        *ptr = OSSwapHostToBigInt16(rpm);
     }
     
     return SmcSuccess;
@@ -32,7 +32,8 @@ SMC_RESULT F0Tg::readAccess() {
         IOSimpleLockLock(manager->stateLock);
         UInt16 rpm = manager->state.fanSpeedRPM;
         IOSimpleLockUnlock(manager->stateLock);
-        *ptr = OSSwapHostToBigInt16(rpm << 2);
+        // Jangan dikali 4 biar macOS nggak panik ngebaca 26000 RPM
+        *ptr = OSSwapHostToBigInt16(rpm);
     }
     return SmcSuccess;
 }
@@ -40,14 +41,14 @@ SMC_RESULT F0Tg::readAccess() {
 SMC_RESULT F0Mn::readAccess() {
     UInt16 *ptr = reinterpret_cast<UInt16 *>(data);
     // Min 0 RPM
-    *ptr = OSSwapHostToBigInt16(0 << 2);
+    *ptr = OSSwapHostToBigInt16(0);
     return SmcSuccess;
 }
 
 SMC_RESULT F0Mx::readAccess() {
     UInt16 *ptr = reinterpret_cast<UInt16 *>(data);
     // Max 6500 RPM
-    *ptr = OSSwapHostToBigInt16(6500 << 2);
+    *ptr = OSSwapHostToBigInt16(8500);
     return SmcSuccess;
 }
 
