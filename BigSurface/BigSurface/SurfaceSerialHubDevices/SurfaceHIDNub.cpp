@@ -169,8 +169,11 @@ IOReturn SurfaceHIDNub::getLegacyData(SurfaceHIDDeviceType device, SurfaceHIDDes
     return ssh->getResponse(SSH_TC_KBD, SSH_TID_SECONDARY, device, SSH_CID_KBD_GET_DESCRIPTOR, reinterpret_cast<UInt8 *>(&entry), 1, true, buffer, buffer_len);
 }
 
+// Maximum payload size per chunk, as used by the Windows HID driver.
+#define SURFACE_HID_DESC_PAYLOAD_SIZE   0x76
+
 IOReturn SurfaceHIDNub::getData(SurfaceHIDDeviceType device, SurfaceHIDDescriptorEntryType entry, UInt8 *buffer, UInt16 buffer_len) {
-    UInt8 cache[SURFACE_HID_DESC_HEADER_SIZE + 0x76];    // 0x76 is used by windows driver
+    UInt8 cache[SURFACE_HID_DESC_HEADER_SIZE + SURFACE_HID_DESC_PAYLOAD_SIZE];
     SurfaceHIDDescriptorBufferHeader *cache_as_buf = reinterpret_cast<SurfaceHIDDescriptorBufferHeader *>(cache);
     
     UInt16 rx_data_len = sizeof(cache) - SURFACE_HID_DESC_HEADER_SIZE;

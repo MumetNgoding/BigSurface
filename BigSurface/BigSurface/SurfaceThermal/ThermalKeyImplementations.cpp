@@ -13,7 +13,7 @@
 
 // Configurable values
 #define MAX_REAL_RPM 8500
-#define APPLE_THERMAL_SCALE 75
+#define APPLE_THERMAL_SCALE 70
 #define MIN_VALID_RPM 500
 
 SMC_RESULT F0Ac::readAccess() {

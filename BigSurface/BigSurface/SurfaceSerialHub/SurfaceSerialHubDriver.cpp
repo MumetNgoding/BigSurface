@@ -674,6 +674,11 @@ void SurfaceSerialHubDriver::releaseResources() {
         hid_nub->detach(this);
         OSSafeReleaseNULL(hid_nub);
     }
+    if (thermal_nub) {
+        thermal_nub->stop(this);
+        thermal_nub->detach(this);
+        OSSafeReleaseNULL(thermal_nub);
+    }
     WaitingRequest *req;
     qe_foreach_element_safe(req, &waiting_list, entry) {
         remqueue(&req->entry);
@@ -766,23 +771,6 @@ IOReturn SurfaceSerialHubDriver::getDeviceResources() {
         return kIOReturnNoResources;
     
     LOG("Found valid UART bus and GPIO interrupt!");
-//    LOG("resource_consumer %d", parser.uart_info.resource_consumer);
-//    LOG("device_initiated %d", parser.uart_info.device_initiated);
-//    LOG("flow_control %d", parser.uart_info.flow_control);
-//    LOG("stop_bits %d", parser.uart_info.stop_bits);
-//    LOG("data_bits %d", parser.uart_info.data_bits);
-//    LOG("big_endian %d", parser.uart_info.big_endian);
-//    LOG("baudrate %u", parser.uart_info.baudrate);
-//    LOG("rx_fifo %d", parser.uart_info.rx_fifo);
-//    LOG("tx_fifo %d", parser.uart_info.tx_fifo);
-//    LOG("parity %d", parser.uart_info.parity);
-//    LOG("dtd_enabled %d", parser.uart_info.dtd_enabled);
-//    LOG("ri_enabled %d", parser.uart_info.ri_enabled);
-//    LOG("dsr_enabled %d", parser.uart_info.dsr_enabled);
-//    LOG("dtr_enabled %d", parser.uart_info.dtr_enabled);
-//    LOG("cts_enabled %d", parser.uart_info.cts_enabled);
-//    LOG("rts_enabled %d", parser.uart_info.rts_enabled);
-    
     baudrate = parser.uart_info.baudrate;
     data_bits = parser.uart_info.data_bits;
     stop_bits = parser.uart_info.stop_bits;

@@ -10,6 +10,8 @@
 #include "../SurfaceSerialHub/SerialProtocol.h"
 #include "../SurfaceSerialHub/SurfaceSerialHubDriver.hpp"
 
+#define LOG(str, ...)    IOLog("%s::" str "\n", "SurfaceThermalNub", ##__VA_ARGS__)
+
 #define super SurfaceSerialHubClient
 OSDefineMetaClassAndStructors(SurfaceThermalNub, SurfaceSerialHubClient);
 
@@ -46,17 +48,13 @@ IOReturn SurfaceThermalNub::getFanSpeed(UInt16 *rpm) {
     if (!rpm || !ssh) return kIOReturnBadArgument;
     
     UInt8 response[4] = {0};
-    // Kita coba IID=0x01 (Fan 1) dulu
-    IOReturn status = ssh->getResponse(SSH_TC_FAN, SSH_TID_PRIMARY, 0x01, 0x01, nullptr, 0, true, response, 4);
+    // Fan 1 is at IID=0x01
+    IOReturn status = ssh->getResponse(SSH_TC_FAN, SSH_TID_PRIMARY, 0x01, SSH_CID_FAN_GET_SPEED, nullptr, 0, true, response, 4);
     
     if (status == kIOReturnSuccess) {
-        // KITA AKTIFIN LAGI LOG-NYA BUAT ANALISA STUCK
-        IOLog("!!! SurfaceThermalNub: RAW DATA -> %02X %02X %02X %02X\n", response[0], response[1], response[2], response[3]);
-        
-        // Ternyata data nggak stuck, kita balikin baca dari byte 0 dan 1
         *rpm = (UInt16)response[0] | ((UInt16)response[1] << 8);
     } else {
-        IOLog("!!! SurfaceThermalNub: SAM Gagal/Timeout (0x%08X)\n", status);
+        LOG("SAM returned error 0x%08X for fan speed query", status);
     }
     
     return status;

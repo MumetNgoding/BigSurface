@@ -80,8 +80,6 @@ void SurfaceBatteryDriver::updateBatteryStatus(IOInterruptEventSource *sender, i
     UInt32 psr;
     timer->cancelTimeout();
 
-
-
     for (int i = 1; i <= BatteryManager::getShared()->batteriesCount; i++) {
         if (bix_fail[i-1]) {
             updateBatteryInformation(nullptr, 0);

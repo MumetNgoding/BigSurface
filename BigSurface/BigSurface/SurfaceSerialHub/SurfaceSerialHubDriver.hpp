@@ -28,13 +28,13 @@
 #define SSH_CMD_TRAIL_CNT       5
 #define SSH_WAIT_TIMEOUT        (SSH_ACK_TIMEOUT * SSH_CMD_TRAIL_CNT)
 
-class CircleIDCounter {
+class CircularIDCounter {
 private:
     UInt16 min;
     UInt16 max;
     UInt16 id;
 public:
-    CircleIDCounter(UInt16 _min, UInt16 _max){
+    CircularIDCounter(UInt16 _min, UInt16 _max){
         min = _min;
         max = _max;
         id = min-1;
@@ -147,8 +147,8 @@ private:
     queue_head_t    pending_list;
     queue_head_t    waiting_list;
     
-    CircleIDCounter seq_counter {CircleIDCounter(0x00, 0xff)};
-    CircleIDCounter req_counter {CircleIDCounter(SSH_REQID_MIN, 0xffff)};
+    CircularIDCounter seq_counter {CircularIDCounter(0x00, 0xff)};
+    CircularIDCounter req_counter {CircularIDCounter(SSH_REQID_MIN, 0xffff)};
     
     UInt32  baudrate {0};
     UInt8   data_bits {0};

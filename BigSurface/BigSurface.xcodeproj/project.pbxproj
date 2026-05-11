@@ -15,6 +15,7 @@
 		0E0D011D2FAFB5FA001CE752 /* ThermalManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E0D011C2FAFB5F8001CE752 /* ThermalManager.cpp */; };
 		0E0D011F2FAFB613001CE752 /* ThermalKeyImplementations.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 0E0D011E2FAFB611001CE752 /* ThermalKeyImplementations.hpp */; };
 		0E0D01212FAFB62D001CE752 /* ThermalKeyImplementations.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E0D01202FAFB62B001CE752 /* ThermalKeyImplementations.cpp */; };
+		0E20B2652FB24382003267E0 /* SerialProtocol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E20B2642FB24382003267E0 /* SerialProtocol.cpp */; };
 		2518A2F62734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 2518A2F32734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.hpp */; };
 		2518A2F72734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2518A2F42734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.cpp */; };
 		2518A2F82734F6AA00B0D631 /* APDS9960Constants.h in Headers */ = {isa = PBXBuildFile; fileRef = 2518A2F52734F6AA00B0D631 /* APDS9960Constants.h */; };
@@ -161,6 +162,7 @@
 		0E0D011C2FAFB5F8001CE752 /* ThermalManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ThermalManager.cpp; sourceTree = "<group>"; };
 		0E0D011E2FAFB611001CE752 /* ThermalKeyImplementations.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ThermalKeyImplementations.hpp; sourceTree = "<group>"; };
 		0E0D01202FAFB62B001CE752 /* ThermalKeyImplementations.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ThermalKeyImplementations.cpp; sourceTree = "<group>"; };
+		0E20B2642FB24382003267E0 /* SerialProtocol.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SerialProtocol.cpp; sourceTree = "<group>"; };
 		2518A2F32734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = SurfaceAmbientLightSensorDriver.hpp; sourceTree = "<group>"; };
 		2518A2F42734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SurfaceAmbientLightSensorDriver.cpp; sourceTree = "<group>"; };
 		2518A2F52734F6AA00B0D631 /* APDS9960Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = APDS9960Constants.h; sourceTree = "<group>"; };
@@ -381,6 +383,7 @@
 		25C8D7E727359FCD00F58956 /* SurfaceSerialHub */ = {
 			isa = PBXGroup;
 			children = (
+				0E20B2642FB24382003267E0 /* SerialProtocol.cpp */,
 				25C8D7E827359FCD00F58956 /* SerialProtocol.h */,
 				25C8D7E927359FCD00F58956 /* SurfaceSerialHubDriver.cpp */,
 				25C8D7EA27359FCD00F58956 /* SurfaceSerialHubDriver.hpp */,
@@ -857,6 +860,7 @@
 				25B97E2B260BA12100657C76 /* VoodooI2CHIDTransducerWrapper.cpp in Sources */,
 				259731812738B01F00A7F7C1 /* BatteryManager.cpp in Sources */,
 				25C8D7EC27359FCD00F58956 /* SurfaceSerialHubDriver.cpp in Sources */,
+				0E20B2652FB24382003267E0 /* SerialProtocol.cpp in Sources */,
 				25DFC0232877EF8C00EA6990 /* VoodooI2CDigitiserStylus.cpp in Sources */,
 				25D9072A2736E2B2006D799F /* AmbientLightValue.cpp in Sources */,
 				25DFC0202877EF8C00EA6990 /* VoodooI2CDigitiserTransducer.cpp in Sources */,
