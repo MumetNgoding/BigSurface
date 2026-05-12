@@ -496,6 +496,39 @@
             <key>IOProviderClass</key>
             <string>SurfaceThermalNub</string>
         </dict>
+		<key>Surface Processor Thermal Controller</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOService</string>
+            <key>IOPCIPrimaryMatch</key>
+            <string>0x8a038086</string>
+            <key>IOProviderClass</key>
+            <string>IOPCIDevice</string>
+        </dict>
+		<key>Surface SPI Controller</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOService</string>
+            <key>IOPCIPrimaryMatch</key>
+            <string>0x34a48086</string>
+            <key>IOProviderClass</key>
+            <string>IOPCIDevice</string>
+        </dict>
+		<key>Surface DRAM Controller</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOService</string>
+            <key>IOPCIPrimaryMatch</key>
+            <string>0x34ef8086</string>
+            <key>IOProviderClass</key>
+            <string>IOPCIDevice</string>
+        </dict>
 		<key>Surface Serial Hub</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
