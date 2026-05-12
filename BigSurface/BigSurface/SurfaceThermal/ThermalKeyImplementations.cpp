@@ -12,8 +12,8 @@
 #define RPM_TO_FPE2(rpm) ((rpm) << 2)
 
 // Configurable values
-#define MAX_REAL_RPM 8500
-#define APPLE_THERMAL_SCALE 70
+#define MAX_REAL_RPM 7200
+#define APPLE_THERMAL_SCALE 100
 #define MIN_VALID_RPM 500
 
 SMC_RESULT F0Ac::readAccess() {
