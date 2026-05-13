@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E0C13EF2FB4445000811E5B /* ThermalCpuPower.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E0C13EE2FB4444600811E5B /* ThermalCpuPower.cpp */; };
+		0E0C13F12FB4446A00811E5B /* ThermalCpuPower.h in Headers */ = {isa = PBXBuildFile; fileRef = 0E0C13F02FB4446000811E5B /* ThermalCpuPower.h */; };
 		0E0D01122FAFB1D9001CE752 /* SurfaceThermalNub.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E0D01112FAFB1D6001CE752 /* SurfaceThermalNub.cpp */; };
 		0E0D01142FAFB1F9001CE752 /* SurfaceThermalNub.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 0E0D01132FAFB1F4001CE752 /* SurfaceThermalNub.hpp */; };
 		0E0D01172FAFB290001CE752 /* SurfaceThermalDriver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0E0D01162FAFB28E001CE752 /* SurfaceThermalDriver.cpp */; };
@@ -154,6 +156,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0E0C13EE2FB4444600811E5B /* ThermalCpuPower.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ThermalCpuPower.cpp; sourceTree = "<group>"; };
+		0E0C13F02FB4446000811E5B /* ThermalCpuPower.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThermalCpuPower.h; sourceTree = "<group>"; };
 		0E0D01112FAFB1D6001CE752 /* SurfaceThermalNub.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SurfaceThermalNub.cpp; sourceTree = "<group>"; };
 		0E0D01132FAFB1F4001CE752 /* SurfaceThermalNub.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SurfaceThermalNub.hpp; sourceTree = "<group>"; };
 		0E0D01162FAFB28E001CE752 /* SurfaceThermalDriver.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SurfaceThermalDriver.cpp; sourceTree = "<group>"; };
@@ -300,6 +304,8 @@
 		0E0D01152FAFB278001CE752 /* SurfaceThermal */ = {
 			isa = PBXGroup;
 			children = (
+				0E0C13F02FB4446000811E5B /* ThermalCpuPower.h */,
+				0E0C13EE2FB4444600811E5B /* ThermalCpuPower.cpp */,
 				0E0D01202FAFB62B001CE752 /* ThermalKeyImplementations.cpp */,
 				0E0D011E2FAFB611001CE752 /* ThermalKeyImplementations.hpp */,
 				0E0D011C2FAFB5F8001CE752 /* ThermalManager.cpp */,
@@ -662,6 +668,7 @@
 				2518A2F62734F6AA00B0D631 /* SurfaceAmbientLightSensorDriver.hpp in Headers */,
 				259731892738B01F00A7F7C1 /* BatteryManager.hpp in Headers */,
 				0E0D01142FAFB1F9001CE752 /* SurfaceThermalNub.hpp in Headers */,
+				0E0C13F12FB4446A00811E5B /* ThermalCpuPower.h in Headers */,
 				0E0D011F2FAFB613001CE752 /* ThermalKeyImplementations.hpp in Headers */,
 				2597317F2738B01F00A7F7C1 /* SurfaceBatteryDriver.hpp in Headers */,
 				25DFC01E2877EF8C00EA6990 /* csgesturescroll.h in Headers */,
@@ -881,6 +888,7 @@
 				0E0D011D2FAFB5FA001CE752 /* ThermalManager.cpp in Sources */,
 				25DE0A6A283738EC002DA176 /* SurfaceHIDDriver.cpp in Sources */,
 				25EA2A7E2836412B00525325 /* SurfaceBatteryNub.cpp in Sources */,
+				0E0C13EF2FB4445000811E5B /* ThermalCpuPower.cpp in Sources */,
 				259731852738B01F00A7F7C1 /* KeyImplementations.cpp in Sources */,
 				2597318D2738B2BA00A7F7C1 /* SurfaceSMBusController.cpp in Sources */,
 				25DE0A8D28379886002DA176 /* VoodooI2CPrecisionTouchpadHIDEventDriver.cpp in Sources */,

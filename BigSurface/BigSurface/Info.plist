@@ -496,6 +496,19 @@
             <key>IOProviderClass</key>
             <string>SurfaceThermalNub</string>
         </dict>
+        <key>Surface Thermal CPU Power</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>IOClass</key>
+            <string>ThermalCpuPower</string>
+            <key>IOMatchCategory</key>
+            <string>ThermalCpuPower</string>
+            <key>IOProbeScore</key>
+            <integer>2000</integer>
+            <key>IOProviderClass</key>
+            <string>SurfaceThermalNub</string>
+        </dict>
 		<key>Surface Processor Thermal Controller</key>
         <dict>
             <key>CFBundleIdentifier</key>
